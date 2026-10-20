@@ -12,6 +12,10 @@ jobs:
         with:
           submodules: "recursive"
 
+      - name: Apply Spirit patch
+        run: |
+          if [ -f spirit_patch.zip ]; then unzip -o spirit_patch.zip; fi
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
