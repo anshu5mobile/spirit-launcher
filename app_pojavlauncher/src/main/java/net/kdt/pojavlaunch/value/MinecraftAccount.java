@@ -14,11 +14,17 @@ import android.util.Base64;
 
 import androidx.annotation.Keep;
 
+import com.spirit.launcher.auth.ElyByAuth;
+import com.spirit.launcher.auth.OfflineUuid;
+
 import org.apache.commons.io.IOUtils;
 
 @SuppressWarnings("IOStreamConstructor")
 @Keep
 public class MinecraftAccount {
+    /** accountType value for Ely.by accounts. Old/legacy account files have null here. */
+    public static final String TYPE_ELYBY = "elyby";
+
     public String accessToken = "0"; // access token
     public String clientToken = "0"; // clientID: refresh and invalidate
     public String profileId = "00000000-0000-0000-0000-000000000000"; // profile UUID, for obtaining skin
@@ -29,13 +35,25 @@ public class MinecraftAccount {
     public String xuid;
     public long expiresAt;
     public String skinFaceBase64;
+    public String accountType; // SPIRIT: null (legacy/offline/microsoft) or TYPE_ELYBY
     private Bitmap mFaceCache;
-    
+
     void updateSkinFace(String uuid) {
+        File skinFile = getSkinFaceFile(username);
+
+        // SPIRIT: Ely.by skins mc-heads.net pe nahi hoti, unka alag skin server hai
+        if (isElyby()) {
+            if (ElyByAuth.downloadFace(username, skinFile)) {
+                Log.i("SkinLoader", "Update Ely.by skin face success");
+            } else {
+                Log.w("SkinLoader", "Could not update Ely.by skin face");
+            }
+            return;
+        }
+
         try {
-            File skinFile = getSkinFaceFile(username);
             Tools.downloadFile("https://mc-heads.net/head/" + uuid + "/100", skinFile.getAbsolutePath());
-            
+
             Log.i("SkinLoader", "Update skin face success");
         } catch (IOException e) {
             // Skin refresh limit, no internet connection, etc...
@@ -51,20 +69,32 @@ public class MinecraftAccount {
     public boolean isDemo(){
         return username.startsWith("Demo.");
     }
-    
+
+    public boolean isElyby() {
+        return TYPE_ELYBY.equals(accountType);
+    }
+
+    /** SPIRIT: offline account jiska UUID vanilla jaisa (OfflinePlayer:<name>) hai, zeros nahi. */
+    public static MinecraftAccount createOffline(String username) {
+        MinecraftAccount acc = new MinecraftAccount();
+        acc.username = username;
+        acc.profileId = OfflineUuid.forName(username);
+        return acc;
+    }
+
     public void updateSkinFace() {
         updateSkinFace(profileId);
     }
-    
+
     public String save(String outPath) throws IOException {
         Tools.write(outPath, Tools.GLOBAL_GSON.toJson(this));
         return username;
     }
-    
+
     public String save() throws IOException {
         return save(Tools.DIR_ACCOUNT_NEW + "/" + username + ".json");
     }
-    
+
     public static MinecraftAccount parse(String content) throws JsonSyntaxException {
         return Tools.GLOBAL_GSON.fromJson(content, MinecraftAccount.class);
     }
