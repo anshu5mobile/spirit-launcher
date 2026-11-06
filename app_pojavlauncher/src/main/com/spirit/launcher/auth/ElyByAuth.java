@@ -41,11 +41,8 @@ public final class ElyByAuth {
     private ElyByAuth() {}
 
     public static class ElyByException extends Exception {
-        /** true => account pe 2FA on hai, UI me 2FA code ka field dikhao */
         public final boolean requires2FA;
-        /** true => session expire, user ko dobara login karna padega */
         public final boolean relogin;
-        /** HTTP status, network error me -1 */
         public final int httpStatus;
 
         public ElyByException(String message, int httpStatus, boolean requires2FA, boolean relogin, Throwable cause) {
@@ -55,8 +52,6 @@ public final class ElyByAuth {
             this.relogin = relogin;
         }
     }
-
-    // ---------------------------------------------------------------- HTTP
 
     private static String readAll(InputStream in) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -115,9 +110,6 @@ public final class ElyByAuth {
         return (e == null || e.isJsonNull()) ? null : e.getAsString();
     }
 
-    // ---------------------------------------------------------------- UUID
-
-    /** Ely.by id bina dashes ke deta hai, Pojav dashes ke saath rakhta hai. */
     static String dashUuid(String id) {
         if (id == null) return null;
         String s = id.replace("-", "");
@@ -125,8 +117,6 @@ public final class ElyByAuth {
         return s.substring(0, 8) + "-" + s.substring(8, 12) + "-" + s.substring(12, 16)
                 + "-" + s.substring(16, 20) + "-" + s.substring(20);
     }
-
-    // ---------------------------------------------------------------- Auth
 
     private static MinecraftAccount toAccount(JsonObject res, String clientToken) throws ElyByException {
         JsonObject profile = (res.has("selectedProfile") && res.get("selectedProfile").isJsonObject())
@@ -145,7 +135,6 @@ public final class ElyByAuth {
         return acc;
     }
 
-    /** totp: 2FA code (6 digit) ya null/empty agar 2FA off hai. */
     public static MinecraftAccount login(String usernameOrEmail, String password, @Nullable String totp)
             throws ElyByException {
         if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty() || password == null || password.isEmpty()) {
@@ -160,11 +149,6 @@ public final class ElyByAuth {
         return toAccount(post("/authenticate", body), clientToken);
     }
 
-    /**
-     * Login + save + skin face. Return value = profile key (PojavProfile.setCurrentProfile ko do).
-     * NOTE: abhi account file ka naam username hai, isliye same naam ka offline/Microsoft account
-     * ho to hum overwrite nahi karte, error dete hain.
-     */
     public static String addAccount(String usernameOrEmail, String password, @Nullable String totp)
             throws ElyByException {
         MinecraftAccount acc = login(usernameOrEmail, password, totp);
@@ -175,7 +159,7 @@ public final class ElyByAuth {
                     + "\" already exists. Remove it first.", -1, false, false, null);
         }
 
-        acc.updateSkinFace(); // best effort, fail ho to ignore
+        acc.updateSkinFace();
         try {
             return acc.save();
         } catch (IOException e) {
@@ -183,7 +167,6 @@ public final class ElyByAuth {
         }
     }
 
-    /** false sirf tab jab server saaf bol de ki token invalid hai. Network error pe true (launch na roko). */
     public static boolean isValid(MinecraftAccount acc) {
         JsonObject body = new JsonObject();
         body.addProperty("accessToken", acc.accessToken);
@@ -195,7 +178,6 @@ public final class ElyByAuth {
         }
     }
 
-    /** Game launch se pehle (background thread me) call karo. Token naya mile to account save hota hai. */
     public static void ensureValid(MinecraftAccount acc) throws ElyByException {
         if (isValid(acc)) return;
 
@@ -219,9 +201,6 @@ public final class ElyByAuth {
         }
     }
 
-    // ---------------------------------------------------------------- Skin face
-
-    /** Ely.by skin download karke 8x8 face (+hat) crop karta hai, 100x100 PNG me save karta hai. */
     public static boolean downloadFace(String username, File out) {
         HttpURLConnection c = null;
         try {
@@ -237,14 +216,14 @@ public final class ElyByAuth {
             }
             if (skin == null || skin.getWidth() < 64) return false;
 
-            int s = skin.getWidth() / 64; // HD skins ke liye scale
+            int s = skin.getWidth() / 64;
             Rect dst = new Rect(0, 0, 8 * s, 8 * s);
             Bitmap head = Bitmap.createBitmap(8 * s, 8 * s, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(head);
             Paint p = new Paint();
             p.setFilterBitmap(false);
-            canvas.drawBitmap(skin, new Rect(8 * s, 8 * s, 16 * s, 16 * s), dst, p);   // face
-            canvas.drawBitmap(skin, new Rect(40 * s, 8 * s, 48 * s, 16 * s), dst, p);  // hat layer
+            canvas.drawBitmap(skin, new Rect(8 * s, 8 * s, 16 * s, 16 * s), dst, p);
+            canvas.drawBitmap(skin, new Rect(40 * s, 8 * s, 48 * s, 16 * s), dst, p);
 
             Bitmap scaled = Bitmap.createScaledBitmap(head, 100, 100, false);
             try (FileOutputStream fos = new FileOutputStream(out)) {
