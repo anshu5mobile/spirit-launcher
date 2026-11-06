@@ -16,6 +16,8 @@ import net.kdt.pojavlaunch.JMinecraftVersionList;
 import net.kdt.pojavlaunch.NewJREUtil;
 import net.kdt.pojavlaunch.R;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.PojavProfile;
+import net.kdt.pojavlaunch.value.MinecraftAccount;
 import net.kdt.pojavlaunch.mirrors.DownloadMirror;
 import net.kdt.pojavlaunch.mirrors.MirrorTamperedException;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
@@ -66,13 +68,23 @@ public class MinecraftDownloader {
     public void start(@Nullable Activity activity, @Nullable JMinecraftVersionList.Version version,
                       @NonNull String realVersion, // this was there for a reason
                       @NonNull AsyncMinecraftDownloader.DoneListener listener) {
-        if(activity != null){
-            isLocalProfile = Tools.isLocalProfile(activity);
-            Tools.switchDemo(Tools.isDemoProfile(activity));
-        } else {
-            isLocalProfile = true;
-            Tools.switchDemo(false);
-        }
+        if (activity != null) {
+    MinecraftAccount account =
+            PojavProfile.getCurrentProfileContent(activity, null);
+
+    Log.d("SpiritAuth",
+            "ActivityNull=false, AccountNull=" + (account == null)
+            + ", Local=" + (account != null && account.isLocal())
+            + ", Demo=" + (account != null && account.isDemo()));
+
+    isLocalProfile = account == null || account.isLocal();
+    Tools.switchDemo(account != null && account.isDemo());
+
+} else {
+    Log.e("SpiritAuth", "ActivityNull=true");
+    isLocalProfile = true;
+    Tools.switchDemo(false);
+}
 
         sExecutorService.execute(() -> {
             try {
