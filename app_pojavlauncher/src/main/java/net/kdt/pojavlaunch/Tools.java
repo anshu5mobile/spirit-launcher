@@ -310,6 +310,10 @@ public final class Tools {
 
         // Pre-process specific files
         disableSplash(gamedir);
+        String elyByJvmArg = null;
+if (minecraftAccount.isElyby()) {
+    elyByJvmArg = ElyByLaunch.prepare(minecraftAccount, new File(Tools.DIR_DATA, "authlib"));
+}
         String[] launchArgs = getMinecraftClientArgs(minecraftAccount, versionInfo, gamedir);
 
         // Select the appropriate openGL version
@@ -321,6 +325,7 @@ public final class Tools {
         List<String> javaArgList = new ArrayList<>();
 
         getCacioJavaArgs(javaArgList, runtime.javaVersion == 8);
+        if (elyByJvmArg != null) javaArgList.add(elyByJvmArg);
 
         if (versionInfo.logging != null) {
             String configFile = Tools.DIR_DATA + "/security/" + versionInfo.logging.client.file.id.replace("client", "log4j-rce-patch");
