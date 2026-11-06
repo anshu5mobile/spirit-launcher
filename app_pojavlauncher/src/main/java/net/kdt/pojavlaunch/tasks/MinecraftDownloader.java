@@ -516,14 +516,9 @@ public class MinecraftDownloader {
         }
         
         private void downloadFile() throws Exception {
-    if (isLocalProfile) {
-        // Skip the exception and proceed with the download process for local profiles
-        System.out.println("Local profile detected. Proceeding with download bypass...");
-    }
-    
-    // Original download logic continues below...
-}
-
+            if(isLocalProfile){
+                throw new RuntimeException("Download failed. Please make sure you are logged in with a Microsoft Account.");
+            }
 
             try {
                 DownloadUtils.ensureSha1(mTargetPath, mTargetSha1, () -> {
